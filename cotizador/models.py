@@ -3,7 +3,6 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-
 UnidadDeMedida = [
     ("Unidades","Unidades"),
     ("Kilogramos","Kilogramos"),
@@ -21,7 +20,7 @@ UnidadDeMedidaSalida = [
 ]
 
 class Insumo(models.Model):
-    PRODUCTO = models.CharField(max_length=120, null=False, blank=False)
+    PRODUCTO = models.CharField(max_length=120, null=False, blank=False,unique=True)
     DETALLE = models.TextField(null=True, blank=True)
     STOCK = models.IntegerField(default=0,null=True,blank=True)
     UNIDAD_MEDIDA_COMPRA = models.CharField(max_length=10, choices=UnidadDeMedida, default="Unidades", null=False, blank=False)
@@ -63,9 +62,11 @@ class Receta(models.Model):
     CODIGO=models.AutoField(primary_key=True)
     NOMBRE=models.CharField(max_length=120,null=False,blank=False) 
     DETALLE=models.CharField(max_length=120,null=True,blank=True) 
+    CANTIDAD_PORCIONES = models.DecimalField(max_digits=12,decimal_places=3,default=1,blank=False,null=False)
     COSTO_RECETA = models.DecimalField(max_digits=22,decimal_places=3,default=0,blank=True,null=True)
-    GASTOS_ADICIONALES = models.DecimalField(max_digits=22,decimal_places=2,default=0,blank=True,null=True)
-    RENTABILIDAD = models.DecimalField(max_digits=5,decimal_places=2,default=0,blank=True,null=True)
+    COSTO_PORCION = models.DecimalField(max_digits=22,decimal_places=3,default=0,blank=True,null=True)
+    GASTOS_ADICIONALES = models.DecimalField(max_digits=22,decimal_places=2,default=0,blank=False,null=False)
+    RENTABILIDAD = models.DecimalField(max_digits=20,decimal_places=2,default=0,blank=True,null=True)
     PRECIO_VENTA = models.DecimalField(max_digits=22,decimal_places=2,default=1,blank=False,null=False)
     INGREDIENTES = models.ManyToManyField(Insumo)
     COSTO_FINAL = models.DecimalField(max_digits=22,decimal_places=2,default=0,blank=True,null=True)
@@ -78,11 +79,17 @@ class Receta(models.Model):
         verbose_name = 'Nuevo Producto'
         verbose_name_plural ='Lista de Precios' 
 
+    def calcular_costo(self):
+            costo = 0
+            for ingrediente in self.INGREDIENTES.all():
+                costo += ingrediente.COSTO_UNITARIO * ingrediente.CANTIDAD
+            return costo
+    
     def save(self, *args, **kwargs):
         
         if not self.pk:
-            super().save(*args, **kwargs)
-            
+             super(Receta, self).save(*args, **kwargs)
+
         costo_receta = 0
         self.COSTO_RECETA = 0
         self.COSTO_FINAL = 0
@@ -95,25 +102,14 @@ class Receta(models.Model):
         self.COSTO_RECETA = costo_receta
         self.COSTO_FINAL = costo_final
 
+        self.COSTO_PORCION = self.COSTO_FINAL / self.CANTIDAD_PORCIONES
+
         rentabilidad = float(((self.PRECIO_VENTA - costo_final) / self.PRECIO_VENTA) * 100)
         self.RENTABILIDAD = rentabilidad
 
-        super().save(*args, **kwargs)
-        #Actualizar_()
+        super(Receta, self).save(*args, **kwargs)
 
-    def update_costo_recetas(self):
-        for ingrediente in self.INGREDIENTES.all():
-            for ingredientereceta in ingrediente.ingredientereceta_set.all():
-                ingredientereceta.costo = ingrediente.COSTO_UNITARIO * ingredientereceta.cantidad
-                ingredientereceta.save()
-
-        self.COSTO_RECETA = sum([i.costo for i in self.ingredientereceta_set.all()])
-        self.COSTO_FINAL = self.COSTO_RECETA + self.GASTOS_ADICIONALES
-        if self.PRECIO_VENTA > 0:
-            self.RENTABILIDAD = (1 - self.COSTO_FINAL / self.PRECIO_VENTA) * 100
-
-        self.save()
-
+        
 
 class ingredientereceta(models.Model):
 
@@ -124,6 +120,9 @@ class ingredientereceta(models.Model):
     medida_uso = models.CharField(max_length=255,blank=True,null=True)
     subtotal = models.DecimalField(max_digits=20,decimal_places=2,default=0,blank=False,null=False)
 
+    class Meta:
+        verbose_name = 'Insumos'
+        verbose_name_plural ='Listado de Insumos' 
 
     def __str__(self):
         return self.receta.NOMBRE
@@ -137,5 +136,7 @@ class ingredientereceta(models.Model):
         self.costo_unitario = self.pruducto.COSTO_UNITARIO
         self.medida_uso = self.pruducto.UNIDAD_MEDIDA_USO
         self.subtotal = self.costo_unitario * self.cantidad
+        
         super().save(*args, **kwargs)
+
 

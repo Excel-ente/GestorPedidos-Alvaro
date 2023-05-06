@@ -1,4 +1,4 @@
-from cotizador.models import Receta
+from .models import Receta
 from django.contrib import admin
 
 

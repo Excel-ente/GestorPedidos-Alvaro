@@ -40,7 +40,7 @@ class RecetaAdmin(ImportExportModelAdmin):
     inlines = [
         IngredienteRecetaInline,
     ]
-    list_display = ('NOMBRE','Costo_Final','Precio_Venta','Rentabilidad','Ultima_Actualizacion',)
+    list_display = ('NOMBRE','Costo_Final','Costo_Porcion','Precio_Venta','Rentabilidad','Ultima_Actualizacion',)
     ordering = ('RENTABILIDAD',)
     exclude=('STOCK','COSTO_RECETA','INGREDIENTES','ULTIMA_ACTUALIZACION',)
     search_fields = ('NOMBRE',)
@@ -50,6 +50,10 @@ class RecetaAdmin(ImportExportModelAdmin):
     actions=[Actualizar,]
     
 
+    def Costo_Porcion(self, obj): 
+        formateo = "💲{:,.2f}".format(obj.COSTO_PORCION)
+        return formateo
+    
     def Costo_Final(self, obj): 
         formateo = "💲{:,.2f}".format(obj.COSTO_FINAL)
         return formateo
