@@ -46,7 +46,7 @@ class RecetaAdmin(ImportExportModelAdmin):
     search_fields = ('NOMBRE',)
     list_per_page = 25
     list_display_links = ('NOMBRE',)
-    readonly_fields=('RENTABILIDAD','COSTO_FINAL',)
+    readonly_fields=('RENTABILIDAD','COSTO_FINAL','COSTO_PORCION',)
     actions=[Actualizar,]
     
 
